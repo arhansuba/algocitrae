@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Price Monitor</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="#dashboard">Dashboard</a></li>
+                <li><a href="#wallet">Wallet</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <section id="dashboard">
+            <h1>Dashboard</h1>
+            <div id="price-chart"></div>
+            <button id="refresh-button">Refresh Prices</button>
+        </section>
+        <section id="wallet">
+            <h1>Wallet</h1>
+            <ul id="transaction-list"></ul>
+            <button id="deposit-button">Deposit</button>
+            <button id="withdraw-button">Withdraw</button>
+        </section>
+    </main>
+    <script src="app.js"></script>
+    <script src="dashboard.js"></script>
+    <script src="wallet.js"></script>
+</body>
+</html>
