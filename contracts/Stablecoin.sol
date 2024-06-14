@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
+import "./IOracle.sol";
+import "./IGovernance.sol";
 // Interfaces need to be correctly defined and imported
 // import "@citrea/sdk/contracts/interfaces/IOracle.sol";
 // import "@citrea/sdk/contracts/interfaces/IGovernance.sol";
@@ -62,10 +63,7 @@ contract Stablecoin is IERC20 {
             "Insufficient BTC collateral"
         );
 
-        require(
-            totalSupply + _amount <= debtCeiling,
-            "Exceeded debt ceiling"
-        );
+        require(totalSupply + _amount <= debtCeiling, "Exceeded debt ceiling");
 
         balanceOf[msg.sender] += _amount;
         totalSupply += _amount;
@@ -132,4 +130,31 @@ contract Stablecoin is IERC20 {
 
         balanceOf[address(this)] -= _amount;
     }
+
+   // function totalSupply() external view override returns (uint256) {}
+
+    //function balanceOf(
+        address account;
+   // ) external view override returns (uint256) {}
+
+    function transfer(
+        address to,
+        uint256 value
+    ) external override returns (bool) {}
+
+    function allowance(
+        address owner,
+        address spender
+    ) external view override returns (uint256) {}
+
+    function approve(
+        address spender,
+        uint256 value
+    ) external override returns (bool) {}
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 value
+    ) external override returns (bool) {}
 }

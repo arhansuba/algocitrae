@@ -1,29 +1,41 @@
-// SPDX-License-Identifier: MIT 
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract Proxy is Initializable, Ownable {
+contract Proxy is Initializable {
+    address public owner;
     address public implementation;
-    
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event ImplementationUpdated(address indexed implementation);
 
-    constructor() {
-        initialize();
+    // Modifier to restrict access to only the owner
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only the owner can call this function");
+        _;
     }
 
-    function initialize() public {
-        _transferOwnership(msg.sender); // Set the owner to the caller
+    // Initialize function for Proxy contract
+    function initialize(address initialOwner) external initializer {
+        owner = initialOwner; // Set the initial owner
     }
 
-    function upgradeTo(address _implementation) external {
-        require(msg.sender == owner(), "Only the owner can upgrade the implementation");
-        require(_implementation != address(0), "Invalid implementation address");
-        implementation = _implementation;
+    // Function to transfer ownership
+    function transferOwnership(address newOwner) external onlyOwner {
+        require(newOwner != address(0), "Invalid new owner address");
+        emit OwnershipTransferred(owner, newOwner);
+        owner = newOwner;
+    }
+
+    // Function to upgrade implementation
+    function upgradeTo(address newImplementation) external onlyOwner {
+        require(newImplementation != address(0), "Invalid implementation address");
+        implementation = newImplementation;
         emit ImplementationUpdated(implementation);
     }
 
+    // Fallback function to delegate calls to implementation contract
     receive() external payable {
         address _impl = implementation;
         require(_impl != address(0), "No implementation contract set");

@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.20;
+
+
 
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 
@@ -12,8 +14,8 @@ contract Oracle is ChainlinkClient {
     event DataSourceUpdated(address dataSource, bool added);
 
     constructor(address _link, address _oracle) {
-        _setChainlinkToken(_link);
-        _setChainlinkOracle(_oracle);
+        setChainlinkToken(_link);
+        setChainlinkOracle(_oracle);
     }
 
     function addDataSource(address _dataSource) external {
@@ -33,13 +35,13 @@ contract Oracle is ChainlinkClient {
     }
 
     function requestData(bytes32 _dataId, address _dataSource) external {
-        Chainlink.Request memory req = _buildChainlinkRequest(
+        Chainlink.Request memory req = buildChainlinkRequest(
             stringToBytes32("get"),
             _dataSource,
             this.fulfill.selector
         );
         req.add("times", 1);
-        _sendChainlinkRequestTo(_oracle, req, 0);
+        sendChainlinkRequestTo(Oracle, req, 0);
     }
 
     function fulfill(bytes32 _requestId, uint256 _value) public recordChainlinkFulfillment(_requestId) {
