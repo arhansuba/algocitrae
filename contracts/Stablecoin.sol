@@ -1,23 +1,22 @@
-// SPDX-License-Identifier: MIT 
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./IOracle.sol";
 import "./IGovernance.sol";
-// Interfaces need to be correctly defined and imported
-// import "@citrea/sdk/contracts/interfaces/IOracle.sol";
-// import "@citrea/sdk/contracts/interfaces/IGovernance.sol";
 
-contract Stablecoin is IERC20 {
+contract Stablecoin is IERC20, Ownable {
     IOracle public oracle;
     IGovernance public governance;
 
-    string public name;
-    string public symbol;
-    uint8 public decimals;
+    string public override name;
+    string public override symbol;
+    uint8 public override decimals;
 
-    uint256 public totalSupply;
-    mapping(address => uint256) public balanceOf;
+    uint256 public override totalSupply;
+    mapping(address => uint256) public override balanceOf;
+    mapping(address => mapping(address => uint256)) public override allowance;
 
     uint256 public btcPrice;
     uint256 public targetPrice;
@@ -34,7 +33,7 @@ contract Stablecoin is IERC20 {
         uint256 _targetPrice,
         uint256 _collateralFactor,
         uint256 _debtCeiling
-    ) {
+    ) Ownable() {
         oracle = _oracle;
         governance = _governance;
 
@@ -46,16 +45,10 @@ contract Stablecoin is IERC20 {
         collateralFactor = _collateralFactor;
         debtCeiling = _debtCeiling;
 
-        totalSupply = 0;
-        balanceOf[msg.sender] = 0;
+        btcPrice = oracle.getBTCPrice(); // Initial fetch of BTC price
     }
 
-    function mint(uint256 _amount) external {
-        require(
-            governance.isAdmin(msg.sender),
-            "Only the governance contract can mint stablecoins"
-        );
-
+    function mint(uint256 _amount) external onlyOwner {
         uint256 btcCollateral = (_amount * btcPrice) / collateralFactor;
 
         require(
@@ -69,6 +62,8 @@ contract Stablecoin is IERC20 {
         totalSupply += _amount;
 
         balanceOf[address(this)] -= btcCollateral;
+
+        emit Transfer(address(0), msg.sender, _amount);
     }
 
     function burn(uint256 _amount) external {
@@ -82,79 +77,65 @@ contract Stablecoin is IERC20 {
 
         uint256 btcCollateral = (_amount * btcPrice) / collateralFactor;
         balanceOf[address(this)] += btcCollateral;
+
+        emit Transfer(msg.sender, address(0), _amount);
     }
 
-    function updateTargetPrice() external {
-        require(
-            governance.isAdmin(msg.sender),
-            "Only the governance contract can update the target price"
-        );
-
+    function updateTargetPrice() external onlyOwner {
         btcPrice = oracle.getBTCPrice();
         targetPrice = btcPrice * collateralFactor;
     }
 
-    function updateCollateralFactor() external {
-        require(
-            governance.isAdmin(msg.sender),
-            "Only the governance contract can update the collateral factor"
-        );
-
+    function updateCollateralFactor() external onlyOwner {
         collateralFactor = governance.getCollateralFactor();
         targetPrice = btcPrice * collateralFactor;
     }
 
-    function updateDebtCeiling() external {
-        require(
-            governance.isAdmin(msg.sender),
-            "Only the governance contract can update the debt ceiling"
-        );
-
+    function updateDebtCeiling() external onlyOwner {
         debtCeiling = governance.getDebtCeiling();
     }
 
     function depositBTC(uint256 _amount) external {
-        require(
-            balanceOf[address(this)] + _amount >= balanceOf[address(this)],
-            "BTC deposit failed"
-        );
-
         balanceOf[address(this)] += _amount;
+        emit Transfer(msg.sender, address(this), _amount);
     }
 
-    function withdrawBTC(uint256 _amount) external {
+    function withdrawBTC(uint256 _amount) external onlyOwner {
         require(
             balanceOf[address(this)] >= _amount,
             "Insufficient BTC balance"
         );
 
         balanceOf[address(this)] -= _amount;
+        emit Transfer(address(this), msg.sender, _amount);
     }
 
-   // function totalSupply() external view override returns (uint256) {}
+    function transfer(address to, uint256 value) external override returns (bool) {
+        require(value <= balanceOf[msg.sender], "Insufficient balance");
 
-    //function balanceOf(
-        address account;
-   // ) external view override returns (uint256) {}
+        balanceOf[msg.sender] -= value;
+        balanceOf[to] += value;
 
-    function transfer(
-        address to,
-        uint256 value
-    ) external override returns (bool) {}
+        emit Transfer(msg.sender, to, value);
+        return true;
+    }
 
-    function allowance(
-        address owner,
-        address spender
-    ) external view override returns (uint256) {}
+    function approve(address spender, uint256 value) external override returns (bool) {
+        allowance[msg.sender][spender] = value;
 
-    function approve(
-        address spender,
-        uint256 value
-    ) external override returns (bool) {}
+        emit Approval(msg.sender, spender, value);
+        return true;
+    }
 
-    function transferFrom(
-        address from,
-        address to,
-        uint256 value
-    ) external override returns (bool) {}
+    function transferFrom(address from, address to, uint256 value) external override returns (bool) {
+        require(value <= balanceOf[from], "Insufficient balance");
+        require(value <= allowance[from][msg.sender], "Allowance exceeded");
+
+        balanceOf[from] -= value;
+        balanceOf[to] += value;
+        allowance[from][msg.sender] -= value;
+
+        emit Transfer(from, to, value);
+        return true;
+    }
 }

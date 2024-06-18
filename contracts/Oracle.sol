@@ -1,14 +1,21 @@
 // SPDX-License-Identifier: MIT 
 pragma solidity ^0.8.20;
 
-
-
+import "./ChainlinkRequest.sol"; // Adjust the path if necessary
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
+import "./IOracle.sol";
+//import "./req.sol";
+
+
 
 contract Oracle is ChainlinkClient {
+    using ChainlinkRequest for ChainlinkRequest.Request;
+
     mapping(bytes32 => uint256) public data;
     mapping(bytes32 => uint256) public timestamps;
     address[] public dataSources;
+
+    uint256 private fee; // Declare fee as a private variable
 
     event NewData(bytes32 dataId, uint256 value, uint256 timestamp);
     event DataSourceUpdated(address dataSource, bool added);
@@ -16,6 +23,7 @@ contract Oracle is ChainlinkClient {
     constructor(address _link, address _oracle) {
         setChainlinkToken(_link);
         setChainlinkOracle(_oracle);
+        fee = 0.1 * 10 ** 18; // Set your desired fee here, 0.1 LINK as an example
     }
 
     function addDataSource(address _dataSource) external {
@@ -35,13 +43,15 @@ contract Oracle is ChainlinkClient {
     }
 
     function requestData(bytes32 _dataId, address _dataSource) external {
-        Chainlink.Request memory req = buildChainlinkRequest(
-            stringToBytes32("get"),
-            _dataSource,
-            this.fulfill.selector
+        ChainlinkRequest.Request memory req;
+        req.initialize(
+            keccak256(abi.encodePacked(_dataId, _dataSource)),
+            address(this),
+            this.fulfill.selector,
+            0
         );
-        req.add("times", 1);
-        sendChainlinkRequestTo(Oracle, req, 0);
+        req.add("times", "1"); // Example usage of add function
+        sendChainlinkRequestTo(address(oracle), req.id, fee); // Use fee here
     }
 
     function fulfill(bytes32 _requestId, uint256 _value) public recordChainlinkFulfillment(_requestId) {
